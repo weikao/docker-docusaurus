@@ -1,0 +1,218 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "示例 API",
+    "description": "这是一个用于演示 docusaurus-plugin-openapi-docs 的示例 API。请将其替换为你自己的 OpenAPI 规范文件（支持 OpenAPI 3.x 与 Swagger 2.0）。",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "https://api.example.com/v1",
+      "description": "生产环境"
+    },
+    {
+      "url": "https://api-staging.example.com/v1",
+      "description": "测试环境"
+    }
+  ],
+  "tags": [
+    {
+      "name": "pets",
+      "description": "宠物管理相关接口"
+    },
+    {
+      "name": "store",
+      "description": "订单相关接口"
+    }
+  ],
+  "paths": {
+    "/pets": {
+      "get": {
+        "tags": ["pets"],
+        "summary": "获取宠物列表",
+        "description": "分页返回宠物列表，支持按状态过滤。",
+        "operationId": "listPets",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "每页返回的最大条数",
+            "required": false,
+            "schema": {"type": "integer", "maximum": 100, "default": 20}
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "description": "按状态过滤",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": ["available", "pending", "sold"]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "宠物列表",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {"$ref": "#/components/schemas/Pet"}
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "意外错误",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/Error"}
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["pets"],
+        "summary": "创建宠物",
+        "description": "创建一只新的宠物。",
+        "operationId": "createPet",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {"$ref": "#/components/schemas/NewPet"}
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "创建成功",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/Pet"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/pets/{petId}": {
+      "get": {
+        "tags": ["pets"],
+        "summary": "获取单个宠物",
+        "operationId": "getPet",
+        "parameters": [
+          {
+            "name": "petId",
+            "in": "path",
+            "required": true,
+            "description": "宠物 ID",
+            "schema": {"type": "integer", "format": "int64"}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "宠物详情",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/Pet"}
+              }
+            }
+          },
+          "404": {
+            "description": "宠物不存在",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/Error"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/store/orders": {
+      "post": {
+        "tags": ["store"],
+        "summary": "创建订单",
+        "operationId": "createOrder",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["petId", "quantity"],
+                "properties": {
+                  "petId": {"type": "integer", "format": "int64"},
+                  "quantity": {"type": "integer", "minimum": 1}
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "订单创建成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {"type": "integer", "format": "int64"},
+                    "status": {
+                      "type": "string",
+                      "enum": ["placed", "approved", "delivered"]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "Pet": {
+        "type": "object",
+        "required": ["id", "name"],
+        "properties": {
+          "id": {"type": "integer", "format": "int64"},
+          "name": {"type": "string"},
+          "tag": {"type": "string"},
+          "status": {
+            "type": "string",
+            "enum": ["available", "pending", "sold"]
+          }
+        }
+      },
+      "NewPet": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": {"type": "string"},
+          "tag": {"type": "string"}
+        }
+      },
+      "Error": {
+        "type": "object",
+        "required": ["code", "message"],
+        "properties": {
+          "code": {"type": "integer", "format": "int32"},
+          "message": {"type": "string"}
+        }
+      }
+    }
+  },
+  "security": [{"bearerAuth": []}]
+}
