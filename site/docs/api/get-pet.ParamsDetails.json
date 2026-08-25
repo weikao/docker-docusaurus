@@ -1,0 +1,1 @@
+{"parameters":[{"name":"petId","in":"path","required":true,"description":"宠物 ID","schema":{"type":"integer","format":"int64"}}]}

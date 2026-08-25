@@ -1,0 +1,1 @@
+{"parameters":[{"name":"limit","in":"query","description":"每页返回的最大条数","required":false,"schema":{"type":"integer","maximum":100,"default":20}},{"name":"status","in":"query","description":"按状态过滤","required":false,"schema":{"type":"string","enum":["available","pending","sold"]}}]}

@@ -1,0 +1,73 @@
+# ============================================================
+# Docusaurus 文档站点 —— 一键编排
+#
+#   docker compose up -d --build docusaurus   启动生产服务（8080）
+#   docker compose up -d dev                  启动开发预览（3000，可选）
+#
+# 内容发布：编辑 site/ 下的 md 后
+#   docker compose restart docusaurus         容器启动时自动编译新内容
+# 站点配置：修改下方 x-site-config 后
+#   docker compose up -d docusaurus           重新创建容器，启动时编译生效
+# 版本升级：修改 .env 中 DOCUSAURUS_VERSION 后
+#   docker compose pull docusaurus && docker compose up -d docusaurus
+# ============================================================
+
+# -------- 站点元数据（SEO / 标题 / 图标 / 部署路径） --------
+# 全部可选：不设置时使用 site/docusaurus.config.js 中的默认值
+# 修改后执行 docker compose up -d docusaurus 重建容器即可生效
+x-site-config: &site-config
+  SITE_TITLE: My Site                                  # 站点标题（<title>、og:title）
+  SITE_TAGLINE: Docusaurus 生产环境 Docker 镜像          # 副标题（首页、全局 description）
+  SITE_URL: https://example.com                        # 部署域名（canonical / sitemap）
+  SITE_BASE_URL: /                                     # 部署子路径（如 /docs/）
+  SITE_FAVICON: /img/favicon.ico                       # 标签图标（放 site/static/img/ 下）
+  SITE_LOCALE: zh-Hans                                 # 站点语言
+  SITE_KEYWORDS: Docusaurus,文档                       # SEO 关键词
+  # SITE_NAVBAR_TITLE: 导航栏标题（默认同 SITE_TITLE）
+  # SITE_FOOTER_COPYRIGHT: 页脚版权文案
+
+services:
+  # -------- 生产服务：启动时编译挂载的站点源码，Nginx 对外服务 --------
+  docusaurus:
+    image: ${IMAGE_NAME:-docusaurus-site}:${DOCUSAURUS_VERSION:-3.10.2}
+    container_name: docusaurus
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    environment:
+      <<: *site-config
+    volumes:
+      # 挂载站点源码（只读）：修改 md 后 restart 即生效
+      - ./site:/site-src:ro
+      # 编译缓存：加速二次编译（约 30s -> 7s）
+      - docusaurus_cache:/app/site/.docusaurus
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1/"]
+      interval: 15s
+      timeout: 5s
+      retries: 6
+      start_period: 180s
+    build:
+      context: .
+      args:
+        BASE_REGISTRY: ${BASE_REGISTRY:-docker.m.daocloud.io}
+
+  # -------- 开发模式：Docusaurus dev server，实时热更新（可选） --------
+  dev:
+    image: ${BASE_REGISTRY:-docker.m.daocloud.io}/library/node:22-alpine
+    container_name: docusaurus-dev
+    working_dir: /app
+    ports:
+      - "3000:3000"
+    environment:
+      <<: *site-config
+      NPM_CONFIG_REGISTRY: https://registry.npmmirror.com
+    volumes:
+      - ./site:/app
+      # node_modules 用卷隔离，避免 Linux 二进制污染宿主机目录
+      - dev_node_modules:/app/node_modules
+    command: sh -c "npm install --no-audit --no-fund && npm run start -- --host 0.0.0.0"
+
+volumes:
+  dev_node_modules:
+  docusaurus_cache:
