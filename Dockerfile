@@ -24,6 +24,9 @@ RUN npm install --no-audit --no-fund \
 # 烘焙一份站点源码，作为未挂载卷时的兜底内容
 COPY site/ ./
 
+# 烘焙一份样例站点（含配置）：挂载目录为空时，启动脚本会将其复制过去供用户参考修改
+COPY site/ /usr/local/share/site-sample/
+
 COPY nginx.conf /etc/nginx/http.d/default.conf
 COPY entrypoint.sh /entrypoint.sh
 RUN sed -i 's/\r$//' /entrypoint.sh && chmod +x /entrypoint.sh

@@ -18,6 +18,7 @@ docker-docusaurus/
 ├── entrypoint.sh        # 启动脚本：同步源码 → 检测依赖变更 → 编译 → 启动 nginx
 ├── nginx.conf           # 生产级 nginx 配置（gzip + 缓存策略）
 ├── build.bat / build.sh # 维护者发版脚本（构建并推送镜像）
+├── build-hub.bat        # 发布到 Docker Hub（版本取自 .env）
 ├── .env                 # 版本号 / 镜像名等配置
 └── site/                # ★ 站点源码（docs、blog、配置都在这里）
     ├── docs/            # 文档 Markdown（日常只改这里）
@@ -108,7 +109,14 @@ build.bat 3.10.3
 
 # 构建并推送到镜像仓库（生产推荐）
 build.bat 3.10.3 registry.example.com/my/docs-site push
+
+# 发布到 Docker Hub（版本自动读取 .env 的 DOCUSAURUS_VERSION，需先 docker login）
+# 仓库名优先取参数，其次 .env 的 DOCKERHUB_REPO，最后 IMAGE_NAME
+build-hub.bat myname/docusaurus-site
 ```
+
+> 首次发布到 Docker Hub 后，把 `DOCKERHUB.md` 的内容粘贴到仓库页面的
+> "Full description"，作为使用者的部署说明。
 
 脚本会同步 `site/package.json` 中 `@docusaurus/*` 依赖版本，构建并打上
 `<版本>` 与 `latest` 两个 tag（加 `push` 参数时推送到仓库）。
@@ -181,6 +189,6 @@ npx docs-to-pdf docusaurus --initialDocURLs="http://localhost:8080/docs/intro" -
 ## 生产部署建议
 
 - **修改对外端口**：编辑 `docker-compose.yml` 中 `ports: "8080:80"`
-- **只读挂载**：源码已以 `:ro` 挂载，容器不会修改你的文件
+- **空目录自动填充样例**：`site/` 为空时，首次启动会自动复制镜像内置的样例站点（含配置）过来，便于参考修改；已有内容则绝不覆盖
 - **升级 Docusaurus**：改 `.env` 的 `DOCUSAURUS_VERSION` → `pull` → `up -d --build`
 - **国内环境**：默认已走 DaoCloud / 淘宝 / 阿里云源，无需额外配置

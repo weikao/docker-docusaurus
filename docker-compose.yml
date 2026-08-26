@@ -6,10 +6,19 @@
 #
 # 内容发布：编辑 site/ 下的 md 后
 #   docker compose restart docusaurus         容器启动时自动编译新内容
-# 站点配置：修改下方 x-site-config 后
+# 站点配置：修改下方的 x-site-config 后
 #   docker compose up -d docusaurus           重新创建容器，启动时编译生效
 # 版本升级：修改 .env 中 DOCUSAURUS_VERSION 后
 #   docker compose pull docusaurus && docker compose up -d docusaurus
+#
+# 低内存服务器（≤ 2GB）防编译 OOM：
+#   1) 编译已启用 Docusaurus Faster（Rspack，峰值约 1GB），
+#      前提是镜像与挂载的 site/ 均为新版（含 future.faster 配置）
+#   2) 建议加 swap（一次性操作）：
+#      sudo fallocate -l 2G /swapfile && sudo chmod 600 /swapfile \
+#        && sudo mkswap /swapfile && sudo swapon /swapfile \
+#        && echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+#   3) 仍紧张时，取消下方 NODE_OPTIONS 注释限制 Node 堆（代价：编译变慢）
 # ============================================================
 
 # -------- 站点元数据（SEO / 标题 / 图标 / 部署路径） --------
@@ -24,7 +33,7 @@ x-site-config: &site-config
   SITE_LOCALE: zh-Hans                                 # 站点语言
   SITE_KEYWORDS: Docusaurus,文档                       # SEO 关键词
   # SITE_NAVBAR_TITLE: 导航栏标题（默认同 SITE_TITLE）
-  # SITE_FOOTER_COPYRIGHT: 页脚版权文案
+  SITE_FOOTER_COPYRIGHT: 'Copyright © 2026 My Site. | <a href="https://beian.miit.gov.cn/" target="_blank" rel="noreferrer">京ICP备XXXXXXXX号</a>'  # 页脚版权文案（支持 HTML）
 
 services:
   # -------- 生产服务：启动时编译挂载的站点源码，Nginx 对外服务 --------
@@ -36,9 +45,13 @@ services:
       - "8080:80"
     environment:
       <<: *site-config
+      # 低内存服务器防编译 OOM：限制 Node 堆上限（仅影响 node 进程，不影响 nginx）
+      # 1GB 内存服务器建议 512，2GB 建议 1024；代价是 GC 更频繁、编译变慢
+      # NODE_OPTIONS: --max-old-space-size=512
     volumes:
-      # 挂载站点源码（只读）：修改 md 后 restart 即生效
-      - ./site:/site-src:ro
+      # 挂载站点源码：目录为空时容器会自动复制镜像内置的样例站点（含配置）过来，
+      # 便于参考修改；修改 md 后 restart 即生效
+      - ./site:/site-src
       # 编译缓存：加速二次编译（约 30s -> 7s）
       - docusaurus_cache:/app/site/.docusaurus
     healthcheck:

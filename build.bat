@@ -20,7 +20,9 @@ if "%~2"=="" (set "IMAGE=docusaurus-site") else (set "IMAGE=%~2")
 set "PUSH=%~3"
 
 echo [1/4] Sync Docusaurus version %VERSION% to site\package.json ...
-powershell -NoProfile -Command "$p='site\package.json'; (Get-Content $p -Raw) -replace '\"@docusaurus/(\w[\w-]*)\":\s*\"[^\"]+\"','\"@docusaurus/$1\": \"%VERSION%\"' | Set-Content $p -NoNewline" || exit /b 1
+rem NOTE: keep the PowerShell command free of embedded double quotes,
+rem otherwise cmd misparses the pipe; use \x22 for a double quote
+powershell -NoProfile -Command "$f='site\package.json'; (Get-Content $f -Raw) -replace '(@docusaurus/[\w-]+\x22\s*:\s*\x22)[^\x22]+','${1}%VERSION%' | Set-Content $f -NoNewline" || exit /b 1
 
 echo [2/4] Building image %IMAGE%:%VERSION% (Docusaurus %VERSION%) ...
 docker build -t %IMAGE%:%VERSION% -t %IMAGE%:latest . || exit /b 1

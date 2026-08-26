@@ -29,6 +29,23 @@ const config = {
   },
 
   onBrokenLinks: 'throw',
+
+  // Docusaurus Faster：用 Rspack + SWC + LightningCSS 替代 webpack + Babel + Terser，
+  // 显著降低编译内存占用与耗时（3.10 起为稳定特性，需依赖 @docusaurus/faster）
+  // 注意：不用 faster: true 简写 —— 其含 ssgWorkerThreads，要求同时开启 v4 future flags；
+  // 此处仅逐项启用降低内存的项，不引入 v4 破坏性变更
+  future: {
+    faster: {
+      swcJsLoader: true,         // SWC 替代 Babel 转译 JS
+      swcJsMinimizer: true,      // SWC 替代 Terser 压缩 JS
+      swcHtmlMinimizer: true,    // SWC 压缩 HTML
+      lightningCssMinimizer: true, // LightningCSS 替代 cssnano/clean-css
+      rspackBundler: true,       // Rspack 替代 webpack 打包（降内存的关键）
+      rspackPersistentCache: true, // Rspack 持久缓存，加速二次编译
+      mdxCrossCompilerCache: true, // MDX 只编译一次（浏览器/Node 共用）
+    },
+  },
+
   markdown: {
     hooks: {
       onBrokenMarkdownLinks: 'throw',
