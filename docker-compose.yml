@@ -30,6 +30,7 @@ x-site-config: &site-config
   SITE_URL: https://example.com                        # 部署域名（canonical / sitemap）
   SITE_BASE_URL: /                                     # 部署子路径（如 /docs/）
   SITE_FAVICON: /img/favicon.ico                       # 标签图标（放 site/static/img/ 下）
+  # SITE_LOGO: /img/logo.png                           # 导航栏 Logo（放 site/static/img/ 下，留空/不设置则不显示）
   SITE_LOCALE: zh-Hans                                 # 站点语言
   SITE_KEYWORDS: Docusaurus,文档                       # SEO 关键词
   # SITE_NAVBAR_TITLE: 导航栏标题（默认同 SITE_TITLE）

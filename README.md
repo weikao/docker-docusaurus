@@ -15,7 +15,7 @@
 docker-docusaurus/
 ├── docker-compose.yml   # 编排：生产服务 + 开发热更新
 ├── Dockerfile           # 生产镜像（node + nginx，启动时编译）
-├── entrypoint.sh        # 启动脚本：同步源码 → 检测依赖变更 → 编译 → 启动 nginx
+├── entrypoint.sh        # 启动脚本：同步源码 → 编译 → 启动 nginx
 ├── nginx.conf           # 生产级 nginx 配置（gzip + 缓存策略）
 ├── build.bat / build.sh # 维护者发版脚本（构建并推送镜像）
 ├── build-hub.bat        # 发布到 Docker Hub（版本取自 .env）
@@ -59,7 +59,8 @@ docker compose restart docusaurus
 
 完成，新内容已上线。无需任何编译脚本、无需重建镜像。
 
-> 如果修改了 `site/package.json`（增删插件/依赖），重启时会自动重新安装依赖。
+> 依赖以镜像为准：修改宿主机 `site/package.json` 不影响生产容器（仅影响 dev 服务）；
+> 需要增删插件/依赖时，由维护者更新清单后重新发版镜像。
 
 ## 站点配置（标题 / SEO / 图标 / 部署路径）
 
@@ -73,6 +74,7 @@ docker compose restart docusaurus
 | `SITE_URL` | 部署域名，canonical / sitemap.xml / og:url 均基于它生成 |
 | `SITE_BASE_URL` | 部署子路径，如部署到 `https://x.com/docs/` 时设为 `/docs/` |
 | `SITE_FAVICON` | 标签图标路径，指向 `site/static/` 下的文件 |
+| `SITE_LOGO` | 导航栏 Logo 路径（如 `/img/logo.png`），留空/不设置则不显示 |
 | `SITE_LOCALE` | 站点语言（默认 `zh-Hans`，影响 `<html lang>` 与界面文案） |
 | `SITE_KEYWORDS` | SEO 关键词 |
 | `SITE_NAVBAR_TITLE` | 导航栏标题（默认同 `SITE_TITLE`） |
@@ -84,7 +86,8 @@ docker compose up -d docusaurus
 ```
 
 > 自定义图标：把文件放到 `site/static/img/` 下（如 `logo.png`），并设置
-> `SITE_FAVICON: /img/logo.png`。静态资源目录 `site/static/` 会原样发布到站点根路径。
+> `SITE_FAVICON: /img/logo.png`（标签图标）或 `SITE_LOGO: /img/logo.png`（导航栏 Logo）。
+> 静态资源目录 `site/static/` 会原样发布到站点根路径。
 
 ## 内容开发（可选，热更新预览）
 
@@ -140,9 +143,10 @@ Packages 中将包可见性改为 Public（或在使用侧配置拉取凭证）�
 ```bash
 # 修改 .env 中 DOCUSAURUS_VERSION 为新版本，然后：
 docker compose pull docusaurus
-docker compose up -d --build docusaurus
+docker compose up -d docusaurus
 ```
 
+依赖（含 Docusaurus 本体）烘焙在镜像内，拉取新镜像即完成升级；
 容器重启时会自动用新版本重新编译文档。
 
 ## 自定义站点
@@ -190,5 +194,5 @@ npx docs-to-pdf docusaurus --initialDocURLs="http://localhost:8080/docs/intro" -
 
 - **修改对外端口**：编辑 `docker-compose.yml` 中 `ports: "8080:80"`
 - **空目录自动填充样例**：`site/` 为空时，首次启动会自动复制镜像内置的样例站点（含配置）过来，便于参考修改；已有内容则绝不覆盖
-- **升级 Docusaurus**：改 `.env` 的 `DOCUSAURUS_VERSION` → `pull` → `up -d --build`
+- **升级 Docusaurus**：改 `.env` 的 `DOCUSAURUS_VERSION` → `pull` → `up -d`
 - **国内环境**：默认已走 DaoCloud / 淘宝 / 阿里云源，无需额外配置

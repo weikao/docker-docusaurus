@@ -14,12 +14,11 @@ WORKDIR /app/site
 # 使用国内 npm 源（淘宝镜像）
 ENV NPM_CONFIG_REGISTRY=https://registry.npmmirror.com
 
-# 预装站点依赖（启动时编译无需再装包），并备份清单用于变更检测
+# 预装站点依赖：依赖清单烘焙进镜像，升级镜像即升级 Docusaurus
 # 注意：不要启用 corepack —— 其 yarn shim 会诱导部分包的安装后脚本（如
 # postman-code-generators）改用 yarn，进而访问 registry.npmjs.org，国内网络下失败
 COPY site/package.json site/package-lock.json ./
-RUN npm install --no-audit --no-fund \
-    && cp package.json /app/site.package.json.orig
+RUN npm install --no-audit --no-fund
 
 # 烘焙一份站点源码，作为未挂载卷时的兜底内容
 COPY site/ ./

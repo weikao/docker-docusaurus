@@ -15,28 +15,25 @@ if [ -d "$SRC_DIR" ] && [ -z "$(ls -A "$SRC_DIR" 2>/dev/null)" ]; then
 fi
 
 # 2) 同步挂载的源码到工作目录（保留镜像内预装的 node_modules）
+#    依赖以镜像为准：不同步 package.json / package-lock.json，
+#    这样升级镜像即升级 Docusaurus，宿主机的清单只影响 dev 服务
 if [ -d "$SRC_DIR" ]; then
   echo "[entrypoint] syncing site source from ${SRC_DIR} ..."
   rsync -a --delete \
     --exclude node_modules \
+    --exclude package.json \
+    --exclude package-lock.json \
     --exclude .docusaurus \
     --exclude build \
     --exclude .build-out \
     "$SRC_DIR/" "$SITE_DIR/"
 fi
 
-# 3) 依赖清单变化时（如更换 Docusaurus 版本）重新安装
-if ! diff -q "$SITE_DIR/package.json" /app/site.package.json.orig >/dev/null 2>&1; then
-  echo "[entrypoint] package.json changed, installing dependencies ..."
-  cd "$SITE_DIR" && npm install --no-audit --no-fund
-  cp "$SITE_DIR/package.json" /app/site.package.json.orig
-fi
-
-# 4) 编译站点（输出到容器内目录，.docusaurus 缓存卷可加速二次编译）
+# 3) 编译站点（输出到容器内目录，.docusaurus 缓存卷可加速二次编译）
 echo "[entrypoint] building site ..."
 cd "$SITE_DIR"
 npm run build -- --out-dir "$OUT_DIR"
 
-# 5) 启动 nginx
+# 4) 启动 nginx
 echo "[entrypoint] starting nginx ..."
 exec nginx -g 'daemon off;'

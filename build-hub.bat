@@ -8,6 +8,9 @@ rem   build-hub.bat nopush           Build only, skip push
 rem   build-hub.bat myname/docs      Build with custom hub repo name
 rem   build-hub.bat myname/docs nopush
 rem
+rem After a successful build the image is also exported to a tar
+rem file (<repo>_<version>.tar) in the current directory.
+rem
 rem Repo name resolution (first match wins):
 rem   1. Command line argument (e.g. myname/docs)
 rem   2. DOCKERHUB_REPO in .env

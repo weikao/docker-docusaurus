@@ -8,6 +8,9 @@ const {themes} = require('prism-react-renderer');
 const SITE_TITLE = process.env.SITE_TITLE || 'My Site';
 const SITE_TAGLINE =
   process.env.SITE_TAGLINE || 'Docusaurus 生产环境 Docker 镜像';
+// 站点 Logo（导航栏标题左侧），指向 site/static/ 下的文件（如 /img/logo.png）；
+// 留空或不设置则不显示 Logo
+const SITE_LOGO = process.env.SITE_LOGO || '';
 
 /** @type {import('@docusaurus/types').Config} */
 const config = {
@@ -146,6 +149,8 @@ const config = {
       ],
       navbar: {
         title: process.env.SITE_NAVBAR_TITLE || SITE_TITLE,
+        // SITE_LOGO 非空时才显示 Logo
+        ...(SITE_LOGO && {logo: {alt: `${SITE_TITLE} Logo`, src: SITE_LOGO}}),
         items: [
           {
             type: 'docSidebar',

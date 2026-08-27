@@ -60,7 +60,8 @@ docker run -d --name docusaurus `
 docker restart docusaurus
 ```
 
-> 如果修改了 `site/package.json`（增删插件/依赖），重启时容器会自动重新安装依赖。
+> 依赖以镜像为准：修改挂载目录里的 `package.json` 不会影响运行中的容器，
+> 升级/更换依赖 = 换用新 tag 的镜像。
 
 ### 3. 版本升级
 
@@ -89,6 +90,7 @@ services:
       SITE_URL: https://example.com         # 部署域名（canonical / sitemap）
       SITE_BASE_URL: /                      # 部署子路径（如 /docs/）
       SITE_FAVICON: /img/favicon.ico        # 图标（放站点 static/img/ 下）
+      # SITE_LOGO: /img/logo.png            # 导航栏 Logo（留空/不设置则不显示）
       SITE_LOCALE: zh-Hans                  # 站点语言
       SITE_KEYWORDS: 文档,教程              # SEO 关键词
     volumes:
@@ -143,6 +145,7 @@ docker compose logs -f docusaurus
 | `SITE_URL` | 部署域名，canonical / sitemap.xml / og:url 均基于它生成 |
 | `SITE_BASE_URL` | 部署子路径，如部署到 `https://x.com/docs/` 时设为 `/docs/` |
 | `SITE_FAVICON` | 标签图标路径，指向站点 `static/` 下的文件 |
+| `SITE_LOGO` | 导航栏 Logo 路径（如 `/img/logo.png`），留空/不设置则不显示 |
 | `SITE_LOCALE` | 站点语言（默认 `zh-Hans`，影响 `<html lang>` 与界面文案） |
 | `SITE_KEYWORDS` | SEO 关键词 |
 | `SITE_NAVBAR_TITLE` | 导航栏标题（默认同 `SITE_TITLE`） |
@@ -153,10 +156,9 @@ docker compose logs -f docusaurus
 容器启动时依次执行（见镜像内 `entrypoint.sh`）：
 
 1. **空目录填充**：`/site-src` 为空时，把镜像内置的样例站点（含配置）复制进去，供参考修改
-2. **同步源码**：把 `/site-src` 同步到工作目录（保留镜像内预装的 `node_modules`）
-3. **依赖检测**：`package.json` 有变化时自动 `npm install`
-4. **编译站点**：`npm run build`，输出到容器内目录
-5. **启动 Nginx**：生产级配置（gzip + 静态资源缓存策略）
+2. **同步源码**：把 `/site-src` 同步到工作目录（保留镜像内预装的 `node_modules`，依赖清单以镜像为准）
+3. **编译站点**：`npm run build`，输出到容器内目录
+4. **启动 Nginx**：生产级配置（gzip + 静态资源缓存策略）
 
 因此镜像是"运行时编译"模式：内容更新只需重启容器，无需重建镜像；
 代价是启动需要几十秒编译时间（healthcheck 已放宽窗口）。
