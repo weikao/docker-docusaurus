@@ -10,6 +10,8 @@ rem   build-hub.bat myname/docs nopush
 rem
 rem After a successful build the image is also exported to a tar
 rem file (<repo>_<version>.tar) in the current directory.
+rem The script pauses at the end (and on errors) so the window
+rem stays open instead of closing.
 rem
 rem Repo name resolution (first match wins):
 rem   1. Command line argument (e.g. myname/docs)
@@ -22,7 +24,7 @@ setlocal
 
 if not exist .env (
     echo [ERROR] .env not found. Copy .env.example to .env first.
-    exit /b 1
+    goto :fail
 )
 
 rem ---------- Read config from .env ----------
@@ -35,7 +37,7 @@ for /f "tokens=1,* delims==" %%a in ('findstr /b "DOCKERHUB_REPO=" .env') do set
 
 if "%VERSION%"=="" (
     echo [ERROR] DOCUSAURUS_VERSION not set in .env
-    exit /b 1
+    goto :fail
 )
 if "%IMAGE%"=="" set "IMAGE=docusaurus-site"
 
@@ -60,24 +62,30 @@ echo  Version : %VERSION%  ^(from .env DOCUSAURUS_VERSION^)
 echo  Tags    : %VERSION%, latest
 echo ============================================================
 
-echo [1/4] Syncing Docusaurus version %VERSION% to site\package.json ...
+echo [1/5] Syncing Docusaurus version %VERSION% to site\package.json ...
 rem NOTE: keep the PowerShell command free of embedded double quotes,
 rem otherwise cmd misparses the pipe; use \x22 for a double quote and
 rem ${1} so it won't merge with following digits and parse as $13
-powershell -NoProfile -Command "$f='site\package.json'; (Get-Content $f -Raw) -replace '(@docusaurus/[\w-]+\x22\s*:\s*\x22)[^\x22]+','${1}%VERSION%' | Set-Content $f -NoNewline" || exit /b 1
+powershell -NoProfile -Command "$f='site\package.json'; (Get-Content $f -Raw) -replace '(@docusaurus/[\w-]+\x22\s*:\s*\x22)[^\x22]+','${1}%VERSION%' | Set-Content $f -NoNewline" || goto :fail
 
-echo [2/4] Building image %HUB_REPO%:%VERSION% (Docusaurus %VERSION%) ...
-docker build -t %HUB_REPO%:%VERSION% -t %HUB_REPO%:latest . || exit /b 1
+echo [2/5] Building image %HUB_REPO%:%VERSION% (Docusaurus %VERSION%) ...
+docker build -t %HUB_REPO%:%VERSION% -t %HUB_REPO%:latest . || goto :fail
 
-echo [3/4] Build finished:
+rem "/" is not allowed in file names, use "_" instead
+set "TAR_FILE=%HUB_REPO:/=_%_%VERSION%.tar"
+echo [3/5] Exporting image to %TAR_FILE% ...
+docker save -o "%TAR_FILE%" %HUB_REPO%:%VERSION% %HUB_REPO%:latest || goto :fail
+echo Tar exported to %CD%\%TAR_FILE%
+
+echo [4/5] Build finished:
 docker images "%HUB_REPO%"
 
 if "%PUSH%"=="" (
-    echo [4/4] Push skipped. To publish: build-hub.bat %HUB_REPO%
+    echo [5/5] Push skipped. To publish: build-hub.bat %HUB_REPO%
     goto :end
 )
 
-echo [4/4] Pushing to Docker Hub ...
+echo [5/5] Pushing to Docker Hub ...
 docker push %HUB_REPO%:%VERSION% || goto :push_fail
 docker push %HUB_REPO%:latest || goto :push_fail
 echo Push done. User upgrade: set DOCUSAURUS_VERSION=%VERSION% in .env, then:
@@ -89,7 +97,13 @@ echo.
 echo [ERROR] Push failed. If unauthorized, run first:
 echo   docker login
 echo Then re-run: build-hub.bat
+goto :fail
+
+:fail
+echo.
+pause
 exit /b 1
 
 :end
 endlocal
+pause
