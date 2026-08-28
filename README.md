@@ -4,6 +4,7 @@
 
 - **启动即编译**：容器启动时编译挂载的站点源码，然后由 Nginx 提供服务
 - **改 md 即发布**：编辑文档后执行 `docker compose restart docusaurus`，无需重建镜像
+- **产品版本并存**：文档版本与产品版本对应（1.0 / 2.0），复制模板文件即可冻结历史版本
 - **版本即镜像 tag**：Docusaurus 升级 = 拉取新镜像
 - **国内源**：DaoCloud 基础镜像 + 淘宝 npm 源 + 阿里云 alpine 源，全流程无外网压力
 
@@ -23,7 +24,9 @@ docker-docusaurus/
 └── site/                # ★ 站点源码（docs、blog、配置都在这里）
     ├── docs/            # 文档 Markdown（日常只改这里）
     ├── docs/api/        # OpenAPI 生成的 API 文档（勿手改）
-    └── openapi/         # OpenAPI 规范文件（API 文档的唯一数据源）
+    ├── openapi/         # OpenAPI 规范文件（API 文档的唯一数据源）
+    ├── RELEASE.txt.example  # 发布新版本文档的模板（复制为 RELEASE.txt 使用）
+    └── versioned_docs/  # 历史版本的冻结文档（发布后自动生成）
 ```
 
 ## 已集成插件
@@ -88,6 +91,74 @@ docker compose up -d docusaurus
 > 自定义图标：把文件放到 `site/static/img/` 下（如 `logo.png`），并设置
 > `SITE_FAVICON: /img/logo.png`（标签图标）或 `SITE_LOGO: /img/logo.png`（导航栏 Logo）。
 > 静态资源目录 `site/static/` 会原样发布到站点根路径。
+
+## 文档版本（与产品版本对应）
+
+这个平台用于撰写产品说明：**文档版本就是产品版本**——产品发布 1.0，
+文档就有一份 1.0；产品升级到 2.0，再冻结一份 2.0，1.0 的说明书继续给老用户看。
+
+日常写文档只需要关注 `site/docs/`，它永远对应**线上最新版**（`/docs`）。
+只有在产品发布新版本、需要把当前文档定格为历史版本时，才用到下面的操作。
+
+> 全程无需命令行参数、无需在电脑上安装任何开发环境，重启容器即可（与日常发布一样）。
+
+### 发布新版本（产品上线新版本时）
+
+| 步骤 | 操作 |
+|------|------|
+| 1 | 把 `site/RELEASE.txt.example` 复制一份，重命名为 `site/RELEASE.txt` |
+| 2 | 打开它，把最下方的版本号改成产品版本（如 `2.0`） |
+| 3 | 重启容器：`docker compose restart docusaurus`（和平时发布文档完全一样） |
+
+完成。容器启动时会自动：
+
+- 把当前 `site/docs/` 冻结为该版本，保存到 `site/versioned_docs/version-2.0/`
+- 删除 `RELEASE.txt`（一次性指令，不会重复执行）
+- 编译并上线，导航栏自动出现版本切换菜单（未发布过版本时则自动隐藏）
+
+发布后的访问地址：
+
+| 内容 | 位置 | 线上地址 |
+|------|------|----------|
+| 最新版（继续编辑 `site/docs/`） | `site/docs/` | `/docs` |
+| 历史版本 2.0 | `site/versioned_docs/version-2.0/` | `/docs/2.0` |
+| 历史版本 1.0 | `site/versioned_docs/version-1.0/` | `/docs/1.0` |
+
+历史版本页面顶部会显示"不再维护"提示并链接到最新版；线上 `/docs` 始终展示最新文档，
+日常写作流程完全不变。
+
+### 发布失败时
+
+若发布没有生效，`site/` 下会出现 `RELEASE.txt.failed` 文件，常见原因：
+
+- **版本号已存在**：换一个版本号（或先删除旧版本，见下文）
+- **没填版本号 / 版本号含非法字符**：版本号仅限字母、数字和 `. _ -`（如 `1.0`、`2.5`、`v3`）
+
+查看原因：`docker compose logs docusaurus`。修正后重新创建 `RELEASE.txt` 再重启即可。
+
+### 修订历史版本
+
+发现老版本的文档写错了？直接编辑 `site/versioned_docs/version-<版本>/` 下的 Markdown，
+然后照常 `docker compose restart docusaurus`——只影响该历史版本，最新版不受影响。
+
+### 删除历史版本
+
+在 `site/versions.json` 中删除对应版本名那一行，再删除
+`site/versioned_docs/version-<版本>/` 与 `site/versioned_sidebars/version-<版本>-sidebars.json`，
+重启容器生效。（历史版本数量建议保持在 10 个以内，太久远的版本可直接删除。）
+
+### 进阶配置（维护者可选）
+
+版本行为的少量开关已做成环境变量，在 `docker-compose.yml` 的 `x-site-config` 中配置，
+修改后 `docker compose up -d docusaurus` 重建容器生效，业务人员无需关心：
+
+| 环境变量 | 默认 | 作用 |
+|----------|------|------|
+| `SITE_DOCS_LAST_VERSION` | `current` | 最新版指向（占据 `/docs`）。默认当前文档即最新版；设为分版名（如 `2.0`）则 `site/docs/` 变为"下一版开发中"，仅在 `/docs/next` 可见 |
+| `SITE_DOCS_INCLUDE_CURRENT` | `true` | 当前文档尚未定稿、暂不对外发布时设为 `false`（注意：从未发布过版本时不能设为 `false`，否则站点没有可发布内容） |
+| `SITE_DOCS_CURRENT_LABEL` | `Current` | 当前版本在下拉菜单 / 徽章中的标签 |
+| `SITE_DOCS_CURRENT_PATH` | 自动 | 当前版本 URL 路径（默认最新版为 `/docs`，否则 `/docs/next`） |
+| `SITE_DOCS_VERSION_DROPDOWN` | 自动 | 导航栏版本下拉菜单；`true`/`false` 强制开/关，留空则发布过版本后自动显示 |
 
 ## 内容开发（可选，热更新预览）
 

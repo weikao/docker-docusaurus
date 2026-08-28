@@ -36,6 +36,17 @@ x-site-config: &site-config
   # SITE_NAVBAR_TITLE: 导航栏标题（默认同 SITE_TITLE）
   SITE_FOOTER_COPYRIGHT: 'Copyright © 2026 My Site. | <a href="https://beian.miit.gov.cn/" target="_blank" rel="noreferrer">京ICP备XXXXXXXX号</a>'  # 页脚版权文案（支持 HTML）
 
+  # -------- 文档版本管理（全部可选，详见 README「文档版本」） --------
+  # 发布新文档版本（与产品版本对应）：复制 site/RELEASE.txt.example 为
+  # site/RELEASE.txt、填产品版本号，然后 docker compose restart docusaurus 即可，
+  # 全程无需命令行参数与本地 Node/npm
+  # 默认「当前文档即最新版」：site/docs/ 始终发布在 /docs，历史版本在 /docs/<版本号>
+  # SITE_DOCS_LAST_VERSION: current          # 最新版指向；设为版本名（如 2.0）则 site/docs/ 变为 /docs/next 的「下一版开发中」
+  # SITE_DOCS_INCLUDE_CURRENT: 'true'        # 当前文档尚未定稿时设为 false，暂不对外发布
+  # SITE_DOCS_CURRENT_LABEL: Current         # 当前版本在下拉菜单中的标签
+  # SITE_DOCS_CURRENT_PATH: ''               # 当前版本 URL 路径（留空自动：最新版=/docs，否则 /docs/next）
+  # SITE_DOCS_VERSION_DROPDOWN: ''           # 导航栏版本下拉菜单（留空=发布过版本后自动显示；true/false 强制开/关）
+
 services:
   # -------- 生产服务：启动时编译挂载的站点源码，Nginx 对外服务 --------
   docusaurus:

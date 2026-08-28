@@ -2,6 +2,8 @@
 // Note: type annotations allow type checking and IDE autocompletion
 
 const {themes} = require('prism-react-renderer');
+const fs = require('fs');
+const path = require('path');
 
 // 站点元数据支持通过环境变量覆盖（在 docker-compose.yml 的 environment 中配置），
 // 未设置时使用下方默认值
@@ -11,6 +13,25 @@ const SITE_TAGLINE =
 // 站点 Logo（导航栏标题左侧），指向 site/static/ 下的文件（如 /img/logo.png）；
 // 留空或不设置则不显示 Logo
 const SITE_LOGO = process.env.SITE_LOGO || '';
+
+// -------- 文档版本管理（详见 README「文档版本管理」） --------
+// 默认「当前版本即最新版」：site/docs/ 始终发布在 /docs，分版后的冻结版本
+// 发布在 /docs/<版本号> —— 契合本项目「改 md 即发布」的工作流。
+// 若 site/docs/ 代表「下一版开发中」内容，将 SITE_DOCS_LAST_VERSION 设为
+// versions.json 中最新的分版名（Docusaurus 原生默认模式：/docs 指向冻结版，
+// /docs/next 指向开发版）。未分版时 current 本就是最新版，此配置无副作用。
+const SITE_DOCS_LAST_VERSION = process.env.SITE_DOCS_LAST_VERSION || 'current';
+// 当前版本（site/docs/）尚未定稿、暂不对外发布时设为 false
+// 注意：未分版时设为 false 会导致没有任何可发布版本，构建会失败
+const SITE_DOCS_INCLUDE_CURRENT =
+  process.env.SITE_DOCS_INCLUDE_CURRENT !== 'false';
+// 导航栏版本下拉菜单：未分版时无意义，默认自动隐藏；分版后自动显示。
+// 显式设置 true / false 可强制覆盖
+const SITE_DOCS_VERSION_DROPDOWN = process.env.SITE_DOCS_VERSION_DROPDOWN;
+const hasVersionedDocs = fs.existsSync(path.join(__dirname, 'versions.json'));
+const showVersionDropdown =
+  SITE_DOCS_VERSION_DROPDOWN === 'true' ||
+  (SITE_DOCS_VERSION_DROPDOWN !== 'false' && hasVersionedDocs);
 
 /** @type {import('@docusaurus/types').Config} */
 const config = {
@@ -64,6 +85,20 @@ const config = {
           sidebarPath: './sidebars.js',
           // OpenAPI 文档使用 openapi-docs 主题的文档渲染组件
           docItemComponent: '@theme/ApiItem',
+          // 版本管理：最新版本指向（当前版本即最新版 = /docs 指向 site/docs/）
+          lastVersion: SITE_DOCS_LAST_VERSION,
+          includeCurrentVersion: SITE_DOCS_INCLUDE_CURRENT,
+          versions: {
+            current: {
+              // 当前版本在下拉菜单 / 徽章中的显示标签
+              // （Docusaurus 原生默认为 Next，改 md 即发布模式下 Current 更直观）
+              label: process.env.SITE_DOCS_CURRENT_LABEL || 'Current',
+              // 留空则自动：当前版本为最新版时占 /docs，否则占 /docs/next
+              ...(process.env.SITE_DOCS_CURRENT_PATH && {
+                path: process.env.SITE_DOCS_CURRENT_PATH,
+              }),
+            },
+          },
         },
         blog: false,
         // sitemap.xml 由官方 plugin-sitemap 生成（preset 内置）
@@ -158,6 +193,16 @@ const config = {
             position: 'left',
             label: '文档',
           },
+          // 文档版本切换：分版后自动出现（SITE_DOCS_VERSION_DROPDOWN 可强制开/关），
+          // 自动跟随用户当前浏览的版本
+          ...(showVersionDropdown
+            ? [
+                {
+                  type: 'docsVersionDropdown',
+                  position: 'left',
+                },
+              ]
+            : []),
         ],
       },
       footer: {
