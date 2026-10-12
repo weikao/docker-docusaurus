@@ -14,6 +14,41 @@ const SITE_TAGLINE =
 // 留空或不设置则不显示 Logo
 const SITE_LOGO = process.env.SITE_LOGO || '';
 
+// -------- 多语言 i18n（单域名子路径方案，详见 README / .env.example）--------
+// SITE_LOCALE      —— 默认语言，占据站点根路径 /
+// SITE_LOCALES_EXTRA —— 逗号分隔的附加语言，各自编译到 /<locale>/ 子路径
+// 未设置 SITE_LOCALES_EXTRA 时 = 单语言模式，行为与改造前完全一致
+const SITE_LOCALE = process.env.SITE_LOCALE || 'zh-Hans';
+const SITE_LOCALES_EXTRA = (process.env.SITE_LOCALES_EXTRA || '')
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean)
+  .filter((s) => s !== SITE_LOCALE); // 防御：默认语言重复出现
+const SITE_LOCALES = [SITE_LOCALE, ...SITE_LOCALES_EXTRA];
+const IS_MULTI_LOCALE = SITE_LOCALES.length > 1;
+
+// 常见语言的导航栏显示名与阅读方向；未列出的语言回退为代码本身、ltr
+// 需要更多语言时在此追加即可（label 会显示在 localeDropdown 中）
+const LOCALE_PRESETS = {
+  'zh-Hans': {label: '简体中文', direction: 'ltr'},
+  'zh-Hant': {label: '繁體中文', direction: 'ltr'},
+  en: {label: 'English', direction: 'ltr'},
+  ja: {label: '日本語', direction: 'ltr'},
+  ko: {label: '한국어', direction: 'ltr'},
+  fr: {label: 'Français', direction: 'ltr'},
+  de: {label: 'Deutsch', direction: 'ltr'},
+  es: {label: 'Español', direction: 'ltr'},
+  ru: {label: 'Русский', direction: 'ltr'},
+  ar: {label: 'العربية', direction: 'rtl'},
+  he: {label: 'עברית', direction: 'rtl'},
+};
+const localeConfigs = Object.fromEntries(
+  SITE_LOCALES.map((loc) => [
+    loc,
+    LOCALE_PRESETS[loc] || {label: loc, direction: 'ltr'},
+  ]),
+);
+
 // -------- 文档版本管理（详见 README「文档版本管理」） --------
 // 默认「当前版本即最新版」：site/docs/ 始终发布在 /docs，分版后的冻结版本
 // 发布在 /docs/<版本号> —— 契合本项目「改 md 即发布」的工作流。
@@ -46,10 +81,14 @@ const config = {
   // 浏览器标签图标，指向 site/static/ 下的文件
   favicon: process.env.SITE_FAVICON || '/img/favicon.ico',
 
-  // 站点语言（影响 <html lang> 与搜索分词）
+  // 站点语言（影响 <html lang>、SEO hreflang 与搜索分词）
+  // 多语言启用后，Docusaurus 会为每个 locale 独立编译：
+  //   默认语言 → /（baseUrl 根路径）
+  //   其他语言 → /<locale>/  （例：/en/、/ja/）
   i18n: {
-    defaultLocale: process.env.SITE_LOCALE || 'zh-Hans',
-    locales: [process.env.SITE_LOCALE || 'zh-Hans'],
+    defaultLocale: SITE_LOCALE,
+    locales: SITE_LOCALES,
+    localeConfigs,
   },
 
   onBrokenLinks: 'throw',
@@ -200,6 +239,16 @@ const config = {
                 {
                   type: 'docsVersionDropdown',
                   position: 'left',
+                },
+              ]
+            : []),
+          // 语言切换器：仅在配置了 SITE_LOCALES_EXTRA 时出现，
+          // 单语言模式不渲染，行为与改造前一致
+          ...(IS_MULTI_LOCALE
+            ? [
+                {
+                  type: 'localeDropdown',
+                  position: 'right',
                 },
               ]
             : []),

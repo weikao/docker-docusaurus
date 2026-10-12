@@ -31,7 +31,8 @@ x-site-config: &site-config
   SITE_BASE_URL: /                                     # 部署子路径（如 /docs/）
   SITE_FAVICON: /img/favicon.ico                       # 标签图标（放 site/static/img/ 下）
   # SITE_LOGO: /img/logo.png                           # 导航栏 Logo（放 site/static/img/ 下，留空/不设置则不显示）
-  SITE_LOCALE: zh-Hans                                 # 站点语言
+  SITE_LOCALE: zh-Hans                                 # 站点语言（默认语言，占据根路径 /）
+  # SITE_LOCALES_EXTRA: en,ja                          # 附加语言（逗号分隔）；启用后各自编译到 /<locale>/ 子路径，导航栏自动出现语言切换器。留空 = 单语言模式
   SITE_KEYWORDS: Docusaurus,文档                       # SEO 关键词
   # SITE_NAVBAR_TITLE: 导航栏标题（默认同 SITE_TITLE）
   SITE_FOOTER_COPYRIGHT: 'Copyright © 2026 My Site. | <a href="https://beian.miit.gov.cn/" target="_blank" rel="noreferrer">京ICP备XXXXXXXX号</a>'  # 页脚版权文案（支持 HTML）

@@ -8,6 +8,7 @@
     "build": "docusaurus build",
     "serve": "docusaurus serve",
     "clear": "docusaurus clear",
+    "write-translations": "docusaurus write-translations",
     "gen-api": "npm install --no-audit --no-fund && docusaurus gen-api-docs all",
     "clean-api": "docusaurus clean-api-docs all"
   },
